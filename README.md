@@ -1,36 +1,130 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Unpack - GitHub Code Analysis Platform
+
+![Unpack Logo](public/unpack-logo.png)
+
+Unpack is a web-based platform that analyzes GitHub repositories to provide comprehensive code insights, summarizations, and architecture details. Users can paste GitHub repository links and receive detailed analysis of the codebase, focusing on features, implementation details, and architectural patterns.
+
+## Features
+
+- **Repository Analysis**: Analyze any GitHub repository to get detailed insights
+- **Code Summarization**: Get comprehensive summaries of codebases
+- **Architecture Detection**: Visualize and understand the architecture of repositories
+- **Feature Identification**: Identify key features and implementation details
+- **Code Statistics**: View detailed code statistics including languages, file counts, and line counts
+- **Bookmarking**: Save and organize your favorite analyses
+- **User Authentication**: Secure user accounts and history management
+
+## Tech Stack
+
+- **Frontend**: Next.js with React and TypeScript
+- **Styling**: Tailwind CSS
+- **Database**: PostgreSQL with Prisma ORM
+- **Authentication**: JWT-based authentication
+- **AI Integration**: Gemini API for code analysis
+- **API**: GitHub API for repository data
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18.x or higher
+- PostgreSQL database
+- GitHub API token
+- Gemini API key
+
+### Environment Setup
+
+Create a `.env.local` file in the root directory with the following variables:
+
+```
+# Authentication
+JWT_SECRET=your_jwt_secret
+JWT_REFRESH_SECRET=your_refresh_secret
+
+# Database
+DATABASE_URL=your_postgres_url
+
+# GitHub API
+GITHUB_API_TOKEN=your_github_token
+
+# Gemini API
+GEMINI_API_KEY=your_gemini_api_key
+```
+
+### Installation
+
+1. Clone the repository
+
+```bash
+git clone https://github.com/yourusername/unpack.git
+cd unpack
+```
+
+2. Install dependencies
+
+```bash
+npm install
+```
+
+3. Set up the database
+
+```bash
+npx prisma generate
+npx prisma db push
+```
+
+4. Run the development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+├── prisma/              # Prisma schema and migrations
+├── public/              # Static assets
+├── src/
+│   ├── app/             # Next.js app router pages
+│   ├── components/       # React components
+│   ├── lib/             # Utility functions and libraries
+│   └── middleware.ts    # Authentication middleware
+├── .env.local           # Environment variables (create this file)
+├── next.config.ts       # Next.js configuration
+├── package.json         # Project dependencies
+└── tsconfig.json        # TypeScript configuration
+```
 
-## Learn More
+## API Endpoints
 
-To learn more about Next.js, take a look at the following resources:
+### Authentication
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `POST /api/auth/register` - Create a new user account
+- `POST /api/auth/login` - Authenticate user and return JWT
+- `POST /api/auth/refresh` - Refresh JWT token
+- `POST /api/auth/logout` - Invalidate current JWT token
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Repository Analysis
 
-## Deploy on Vercel
+- `POST /api/repos/analyze` - Submit repo URL for analysis
+- `GET /api/repos/:analysisId` - Get full analysis results
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### History Management
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `GET /api/history` - Get user's analysis history
+- `POST /api/history/:analysisId/bookmark` - Bookmark analysis
+- `DELETE /api/history/:analysisId/bookmark` - Remove bookmark
+
+## Deployment
+
+The application can be deployed on Vercel or any other platform that supports Next.js applications.
+
+```bash
+npm run build
+```
+
+## License
+
+MIT
