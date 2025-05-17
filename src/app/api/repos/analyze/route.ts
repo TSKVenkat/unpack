@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { fetchRepository } from "@/lib/github";
 import { analyzeCode } from "@/lib/gemini";
+import { cacheManager } from "@/lib/redis";
 
 const prisma = new PrismaClient();
 
@@ -48,7 +49,32 @@ export async function POST(request: NextRequest) {
     const repoName = repoUrl.split('/').pop() || repoUrl;
 
     // Check if analysis already exists in cache
-    // This would be implemented with Redis in production
+    const cachedAnalysis = await cacheManager.checkCache(repoUrl, 'repository');
+    
+    if (cachedAnalysis) {
+      console.log('Using cached analysis for repository:', repoUrl);
+      
+      // Store analysis in database for history tracking
+      const analysis = await prisma.analysis.create({
+        data: {
+          repoUrl,
+          repoName,
+          userId,
+          summary: cachedAnalysis.summary,
+          features: cachedAnalysis.features,
+          architecture: cachedAnalysis.architecture,
+          codeStats: cachedAnalysis.codeStats,
+        },
+      });
+      
+      return NextResponse.json(
+        { 
+          message: "Analysis retrieved from cache",
+          analysisId: analysis.id
+        },
+        { status: 200 }
+      );
+    }
     
     // Fetch repository structure
     const repoData = await fetchRepository(repoUrl);
@@ -84,6 +110,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Store analysis in cache for future requests
+    await cacheManager.storeInCache(
+      repoUrl,
+      'repository',
+      analysisResult
+    );
+    
     return NextResponse.json(
       { 
         message: "Analysis completed successfully",

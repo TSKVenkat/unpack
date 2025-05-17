@@ -1,13 +1,8 @@
 import { Redis } from '@upstash/redis';
+import type { RedisClient } from '@/lib/redis';
 
 // Initialize Redis client
-let redisClient: Redis | {
-    get(key: string): Promise<string | null>;
-    set(key: string, value: string, options?: { EX?: number, PX?: number }): Promise<string>;
-    setex(key: string, seconds: number, value: string): Promise<void>;
-    del(keys: string | string[]): Promise<number>;
-    keys(pattern: string): Promise<string[]>;
-};
+let redisClient: Redis | RedisClient;
 
 // Initialize Redis client if REDIS_URL is available
 if (process.env.REDIS_URL) {
@@ -60,7 +55,7 @@ if (process.env.REDIS_URL) {
 }
 
 // Cache manager for repository analysis
-const cacheManager = {
+export const cacheManager = {
   // Check if analysis exists in cache
   async checkCache(repoUrl: string, type: 'repository' | 'file' | 'directory', path: string | null = null) {
     let cacheKey: string;
@@ -125,8 +120,4 @@ const cacheManager = {
       }
     }
   }
-};
-
-export { redisClient, cacheManager as const };
-
-
+} as const;
