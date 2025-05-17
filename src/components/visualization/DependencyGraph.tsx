@@ -3,18 +3,22 @@
 import { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 
-type DependencyNode = {
+interface DependencyNode extends d3.SimulationNodeDatum {
   id: string;
   name: string;
   type: string;
   size?: number;
-};
+  x?: number;
+  y?: number;
+  fx?: number | null;
+  fy?: number | null;
+}
 
-type DependencyLink = {
-  source: string;
-  target: string;
+interface DependencyLink {
+  source: string | DependencyNode;
+  target: string | DependencyNode;
   strength: number;
-};
+}
 
 type DependencyData = {
   nodes: DependencyNode[];
@@ -47,17 +51,17 @@ export default function DependencyGraph({ data, width = 800, height = 600 }: Pro
     svg.call(
       d3.zoom<SVGSVGElement, unknown>()
         .scaleExtent([0.1, 4])
-        .on('zoom', (event) => {
-          zoomG.attr('transform', event.transform);
+        .on('zoom', (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
+          zoomG.attr('transform', `translate(${event.transform.x},${event.transform.y}) scale(${event.transform.k})`);
         }) as any
     );
 
     // Create a force simulation
-    const simulation = d3.forceSimulation()
-      .force('link', d3.forceLink().id((d: any) => d.id).distance(100))
-      .force('charge', d3.forceManyBody().strength(-200))
+    const simulation = d3.forceSimulation<DependencyNode>()
+      .force('link', d3.forceLink<DependencyNode, DependencyLink>().id((d: DependencyNode) => d.id).distance(100))
+      .force('charge', d3.forceManyBody<DependencyNode>().strength(-200))
       .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius((d: any) => getNodeRadius(d) + 5));
+      .force('collision', d3.forceCollide<DependencyNode>().radius((d: DependencyNode) => getNodeRadius(d) + 5));
 
     // Create links
     const links = zoomG.selectAll('.link')
@@ -67,7 +71,7 @@ export default function DependencyGraph({ data, width = 800, height = 600 }: Pro
       .attr('class', 'link')
       .attr('stroke', '#999')
       .attr('stroke-opacity', 0.6)
-      .attr('stroke-width', d => Math.sqrt(d.strength) * 2);
+      .attr('stroke-width', (d: DependencyLink) => Math.sqrt(d.strength) * 2);
 
     // Create nodes
     const nodes = zoomG.selectAll('.node')
@@ -82,8 +86,8 @@ export default function DependencyGraph({ data, width = 800, height = 600 }: Pro
 
     // Add node circles
     nodes.append('circle')
-      .attr('r', getNodeRadius)
-      .attr('fill', d => getNodeColor(d.type))
+      .attr('r', (d: DependencyNode) => getNodeRadius(d))
+      .attr('fill', (d: DependencyNode) => getNodeColor(d.type))
       .attr('stroke', '#fff')
       .attr('stroke-width', 1.5);
 
@@ -91,42 +95,62 @@ export default function DependencyGraph({ data, width = 800, height = 600 }: Pro
     nodes.append('text')
       .attr('dy', '.35em')
       .attr('text-anchor', 'middle')
-      .text(d => d.name)
+      .text((d: DependencyNode) => d.name)
       .style('font-size', '10px')
-      .style('fill', d => isLightColor(d.type) ? '#000' : '#fff')
+      .style('fill', (d: DependencyNode) => isLightColor(d.type) ? '#000' : '#fff')
       .style('pointer-events', 'none');
 
     // Add tooltips
     nodes.append('title')
-      .text(d => `${d.name} (${d.type})`);
+      .text((d: DependencyNode) => `${d.name} (${d.type})`);
 
     // Update positions on simulation tick
-    simulation.nodes(data.nodes as any).on('tick', () => {
+    simulation.nodes(data.nodes).on('tick', () => {
       links
-        .attr('x1', d => (d.source as any).x)
-        .attr('y1', d => (d.source as any).y)
-        .attr('x2', d => (d.target as any).x)
-        .attr('y2', d => (d.target as any).y);
+        .attr('x1', (d: any) => {
+          const source = typeof d.source === 'string' 
+            ? data.nodes.find(n => n.id === d.source) 
+            : d.source as DependencyNode;
+          return source?.x || 0;
+        })
+        .attr('y1', (d: any) => {
+          const source = typeof d.source === 'string' 
+            ? data.nodes.find(n => n.id === d.source) 
+            : d.source as DependencyNode;
+          return source?.y || 0;
+        })
+        .attr('x2', (d: any) => {
+          const target = typeof d.target === 'string' 
+            ? data.nodes.find(n => n.id === d.target) 
+            : d.target as DependencyNode;
+          return target?.x || 0;
+        })
+        .attr('y2', (d: any) => {
+          const target = typeof d.target === 'string' 
+            ? data.nodes.find(n => n.id === d.target) 
+            : d.target as DependencyNode;
+          return target?.y || 0;
+        });
 
-      nodes.attr('transform', d => `translate(${d.x}, ${d.y})`);
+      nodes.attr('transform', (d: DependencyNode) => `translate(${d.x || 0}, ${d.y || 0})`);
     });
 
     // Apply links to simulation
-    simulation.force<d3.ForceLink<any, any>>('link')!.links(data.links as any);
+    simulation.force<d3.ForceLink<DependencyNode, DependencyLink>>('link')!.links(data.links as any);
 
     // Drag functions
-    function dragstarted(event: any, d: any) {
+    function dragstarted(event: d3.D3DragEvent<SVGGElement, DependencyNode, DependencyNode>, d: DependencyNode) {
       if (!event.active) simulation.alphaTarget(0.3).restart();
       d.fx = d.x;
       d.fy = d.y;
     }
 
-    function dragged(event: any, d: any) {
+    function dragged(event: d3.D3DragEvent<SVGGElement, DependencyNode, DependencyNode>, d: DependencyNode) {
       d.fx = event.x;
       d.fy = event.y;
     }
 
-    function dragended(event: any, d: any) {
+    function dragended(event: d3.D3DragEvent<SVGGElement, DependencyNode, DependencyNode>, d: DependencyNode) {
       if (!event.active) simulation.alphaTarget(0);
       d.fx = null;
       d.fy = null;

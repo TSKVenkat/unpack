@@ -1,14 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getAnalysisById } from '@/lib/prisma';
 import { generatePDF } from '@/lib/pdf';
 import { generateMarkdown } from '@/lib/markdown';
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { analysisId: string } }
 ) {
   try {
-    const { format = 'pdf' } = request.nextUrl.searchParams;
+    const format = request.nextUrl.searchParams.get('format') || 'pdf';
     const analysis = await getAnalysisById(params.analysisId);
 
     if (!analysis) {

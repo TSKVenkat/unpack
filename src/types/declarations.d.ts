@@ -1,5 +1,17 @@
 declare module 'jsonwebtoken';
 declare module 'bcrypt';
+declare module 'd3';
+
+// Add this to make TypeScript happy with bcrypt
+interface BcryptModule {
+  compare(data: string, encrypted: string): Promise<boolean>;
+  hash(data: string, saltOrRounds: string | number): Promise<string>;
+}
+
+declare module 'bcrypt' {
+  const bcrypt: BcryptModule;
+  export = bcrypt;
+}
 
 declare module '@/lib/prisma' {
   export function getAnalysisById(id: string): Promise<Analysis>;

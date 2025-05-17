@@ -50,8 +50,8 @@ export default function CodeStructureVisualization({ data, width = 800, height =
       .append('path')
       .attr('class', 'link')
       .attr('d', d3.linkHorizontal<d3.HierarchyPointLink<NodeData>, d3.HierarchyPointNode<NodeData>>()
-        .x(d => d.y)
-        .y(d => d.x))
+        .x((d: any) => d.y)
+        .y((d: any) => d.x))
       .attr('fill', 'none')
       .attr('stroke', '#ccc')
       .attr('stroke-width', 1.5);
@@ -62,24 +62,24 @@ export default function CodeStructureVisualization({ data, width = 800, height =
       .enter()
       .append('g')
       .attr('class', 'node')
-      .attr('transform', d => `translate(${d.y}, ${d.x})`)
-      .on('click', (event, d) => {
+      .attr('transform', (d: d3.HierarchyPointNode<NodeData>) => `translate(${d.y}, ${d.x})`)
+      .on('click', (event: any, d: d3.HierarchyPointNode<NodeData>) => {
         setSelectedNode(d.data);
       });
 
     // Add node circles
     nodes.append('circle')
-      .attr('r', d => d.data.type === 'directory' ? 8 : 5)
-      .attr('fill', d => d.data.type === 'directory' ? '#4299e1' : '#48bb78')
+      .attr('r', (d: d3.HierarchyPointNode<NodeData>) => d.data.type === 'directory' ? 8 : 5)
+      .attr('fill', (d: d3.HierarchyPointNode<NodeData>) => d.data.type === 'directory' ? '#4299e1' : '#48bb78')
       .attr('stroke', '#fff')
       .attr('stroke-width', 1.5);
 
     // Add node labels
     nodes.append('text')
       .attr('dy', '.31em')
-      .attr('x', d => d.children ? -12 : 12)
-      .attr('text-anchor', d => d.children ? 'end' : 'start')
-      .text(d => d.data.name)
+      .attr('x', (d: d3.HierarchyPointNode<NodeData>) => d.children ? -12 : 12)
+      .attr('text-anchor', (d: d3.HierarchyPointNode<NodeData>) => d.children ? 'end' : 'start')
+      .text((d: d3.HierarchyPointNode<NodeData>) => d.data.name)
       .style('font-size', '12px')
       .style('font-family', 'sans-serif');
 

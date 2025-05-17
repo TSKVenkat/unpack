@@ -1,9 +1,9 @@
 import { Analysis } from '@/types/declarations';
 
 export function generateMarkdown(analysis: Analysis): string {
-  const features = JSON.parse(analysis.features);
-  const stats = JSON.parse(analysis.codeStats);
-  const architecture = JSON.parse(analysis.architecture);
+  const features = JSON.parse(typeof analysis.features === 'string' ? analysis.features : JSON.stringify(analysis.features));
+  const stats = JSON.parse(typeof analysis.codeStats === 'string' ? analysis.codeStats : JSON.stringify(analysis.codeStats));
+  const architecture = JSON.parse(typeof analysis.architecture === 'string' ? analysis.architecture : JSON.stringify(analysis.architecture));
 
   return `# Code Analysis Report
 
@@ -15,7 +15,7 @@ export function generateMarkdown(analysis: Analysis): string {
 ${analysis.summary}
 
 ## Detected Features
-${features.map(feature => `- **${feature.name}**: ${feature.description}`).join('\n')}
+${features.map((feature: any) => `- **${feature.name}**: ${feature.description}`).join('\n')}
 
 ## Architecture
 ${Object.entries(architecture).map(([key, value]) => 

@@ -52,7 +52,7 @@ export async function generatePDF(analysis: Analysis): Promise<Uint8Array> {
     color: rgb(0, 0, 0),
   });
 
-  const features = JSON.parse(analysis.features);
+  const features = JSON.parse(typeof analysis.features === 'string' ? analysis.features : JSON.stringify(analysis.features));
   for (const feature of features) {
     page.drawText(`- ${feature.name}: ${feature.description}`, {
       x: 50,
@@ -71,7 +71,7 @@ export async function generatePDF(analysis: Analysis): Promise<Uint8Array> {
     color: rgb(0, 0, 0),
   });
 
-  const stats = JSON.parse(analysis.codeStats);
+  const stats = JSON.parse(typeof analysis.codeStats === 'string' ? analysis.codeStats : JSON.stringify(analysis.codeStats));
   for (const [key, value] of Object.entries(stats)) {
     page.drawText(`${key}: ${value}`, {
       x: 50,

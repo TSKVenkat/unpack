@@ -1,5 +1,6 @@
 import { Analysis } from '@/types/declarations';
 import { getAnalysisById } from '@/lib/prisma';
+import redisClient from '@/lib/redis';
 
 export type AnalysisStatus = {
   status: 'pending' | 'processing' | 'completed' | 'failed';
@@ -66,7 +67,7 @@ export async function getAnalysisStatus(analysisId: string): Promise<AnalysisSta
 
 async function checkCacheStatus(analysisId: string): Promise<AnalysisStatus | null> {
   try {
-    const status = await redis.get(`analysis:${analysisId}:status`);
+    const status = await redisClient.get(`analysis:${analysisId}:status`);
     if (status) {
       return JSON.parse(status);
     }
@@ -79,7 +80,7 @@ async function checkCacheStatus(analysisId: string): Promise<AnalysisStatus | nu
 
 async function updateCacheStatus(analysisId: string, status: AnalysisStatus): Promise<void> {
   try {
-    await redis.setex(`analysis:${analysisId}:status`, 3600, JSON.stringify(status));
+    await redisClient.setex(`analysis:${analysisId}:status`, 3600, JSON.stringify(status));
   } catch (error) {
     console.error('Error updating cache status:', error);
   }
