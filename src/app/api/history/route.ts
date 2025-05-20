@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 
-const prisma = new PrismaClient();
+
 
 // Helper to extract user ID from JWT token
 const getUserFromToken = (request: NextRequest) => {

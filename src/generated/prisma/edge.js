@@ -35,11 +35,11 @@ exports.Prisma = Prisma
 exports.$Enums = {}
 
 /**
- * Prisma Client JS version: 6.8.1
+ * Prisma Client JS version: 6.8.2
  * Query Engine version: 2060c79ba17c6bb9f5823312b6f6b7f4a845738e
  */
 Prisma.prismaVersion = {
-  client: "6.8.1",
+  client: "6.8.2",
   engine: "2060c79ba17c6bb9f5823312b6f6b7f4a845738e"
 }
 
@@ -196,7 +196,7 @@ const config = {
     "schemaEnvPath": "../../../.env"
   },
   "relativePath": "../../../prisma",
-  "clientVersion": "6.8.1",
+  "clientVersion": "6.8.2",
   "engineVersion": "2060c79ba17c6bb9f5823312b6f6b7f4a845738e",
   "datasourceNames": [
     "db"
@@ -206,13 +206,13 @@ const config = {
   "inlineDatasources": {
     "db": {
       "url": {
-        "fromEnvVar": "DATABASE_URL",
-        "value": null
+        "fromEnvVar": null,
+        "value": "postgresql://unpack_owner:npg_B1EQ2mXFjznZ@ep-billowing-fog-a89hn7qn-pooler.eastus2.azure.neon.tech/unpack?sslmode=require"
       }
     }
   },
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel User {\n  id             String     @id @default(uuid())\n  email          String     @unique\n  hashedPassword String\n  name           String?\n  createdAt      DateTime   @default(now())\n  updatedAt      DateTime   @updatedAt\n  analyses       Analysis[]\n}\n\nmodel Analysis {\n  id            String         @id @default(uuid())\n  repoUrl       String\n  repoName      String\n  userId        String\n  user          User           @relation(fields: [userId], references: [id])\n  createdAt     DateTime       @default(now())\n  updatedAt     DateTime       @updatedAt\n  summary       String         @db.Text\n  features      Json\n  architecture  Json\n  codeStats     Json\n  analysisItems AnalysisItem[]\n  bookmarked    Boolean        @default(false)\n}\n\nmodel AnalysisItem {\n  id         String   @id @default(uuid())\n  analysisId String\n  analysis   Analysis @relation(fields: [analysisId], references: [id])\n  path       String\n  type       String // \"FILE\" or \"DIRECTORY\"\n  summary    String?  @db.Text\n  content    String?  @db.Text\n  features   Json?\n  complexity Float?\n  createdAt  DateTime @default(now())\n}\n",
-  "inlineSchemaHash": "0ed3272cec4913c2bd941f32efca790dd159f160d2229896f0fef5ab73f65d00",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  provider  = \"postgresql\"\n  // Direct URL - no env() wrapper to ensure it doesn't try to load from environment variables\n  url       = \"postgresql://unpack_owner:npg_B1EQ2mXFjznZ@ep-billowing-fog-a89hn7qn-pooler.eastus2.azure.neon.tech/unpack?sslmode=require\"\n  // Explicitly set to ignore environment variables\n  directUrl = \"postgresql://unpack_owner:npg_B1EQ2mXFjznZ@ep-billowing-fog-a89hn7qn-pooler.eastus2.azure.neon.tech/unpack?sslmode=require\"\n}\n\nmodel User {\n  id             String     @id @default(uuid())\n  email          String     @unique\n  hashedPassword String\n  name           String?\n  createdAt      DateTime   @default(now())\n  updatedAt      DateTime   @updatedAt\n  analyses       Analysis[]\n}\n\nmodel Analysis {\n  id            String         @id @default(uuid())\n  repoUrl       String\n  repoName      String\n  userId        String\n  user          User           @relation(fields: [userId], references: [id])\n  createdAt     DateTime       @default(now())\n  updatedAt     DateTime       @updatedAt\n  summary       String         @db.Text\n  features      Json\n  architecture  Json\n  codeStats     Json\n  analysisItems AnalysisItem[]\n  bookmarked    Boolean        @default(false)\n}\n\nmodel AnalysisItem {\n  id         String   @id @default(uuid())\n  analysisId String\n  analysis   Analysis @relation(fields: [analysisId], references: [id])\n  path       String\n  type       String // \"FILE\" or \"DIRECTORY\"\n  summary    String?  @db.Text\n  content    String?  @db.Text\n  features   Json?\n  complexity Float?\n  createdAt  DateTime @default(now())\n}\n",
+  "inlineSchemaHash": "c88c081cedf5bc41fb9c775293b70f84ccf73309fd5a3233e2de63bec179e620",
   "copyEngine": true
 }
 config.dirname = '/'
@@ -223,9 +223,7 @@ config.engineWasm = undefined
 config.compilerWasm = undefined
 
 config.injectableEdgeEnv = () => ({
-  parsed: {
-    DATABASE_URL: typeof globalThis !== 'undefined' && globalThis['DATABASE_URL'] || typeof process !== 'undefined' && process.env && process.env.DATABASE_URL || undefined
-  }
+  parsed: {}
 })
 
 if (typeof globalThis !== 'undefined' && globalThis['DEBUG'] || typeof process !== 'undefined' && process.env && process.env.DEBUG || undefined) {

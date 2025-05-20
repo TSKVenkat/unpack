@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { getUserFromRequest } from "@/lib/auth";
 
-const prisma = new PrismaClient();
+
 
 // Add bookmark
 export async function POST(

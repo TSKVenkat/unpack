@@ -8,7 +8,10 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Direct URL - no env() wrapper to ensure it doesn't try to load from environment variables
+  url      = "postgresql://unpack_owner:npg_B1EQ2mXFjznZ@ep-billowing-fog-a89hn7qn-pooler.eastus2.azure.neon.tech/unpack?sslmode=require"
+  // Explicitly set to ignore environment variables
+  directUrl = "postgresql://unpack_owner:npg_B1EQ2mXFjznZ@ep-billowing-fog-a89hn7qn-pooler.eastus2.azure.neon.tech/unpack?sslmode=require"
 }
 
 model User {
