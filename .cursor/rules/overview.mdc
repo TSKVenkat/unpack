@@ -1,0 +1,35 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+``` # Project Overview
+
+This project, Unpack, is a GitHub code analysis platform. It allows users to analyze GitHub repositories, view summaries, features, architecture, and code statistics.
+
+The main application entry points are handled by Next.js pages in the `src/app` directory. API routes for backend interactions are defined within `src/app/api`. The application uses Prisma for database interactions, configured in the `prisma` directory.
+
+**Key Directories and Files:**
+
+- **`src/app/`**: Contains Next.js pages and API routes.
+  - **`src/app/layout.tsx`**: The root layout for the application.
+  - **`src/app/page.tsx`**: The main landing page.
+  - **`src/app/dashboard/`**: Contains the dashboard page ([src/app/dashboard/page.tsx](mdc:src/app/dashboard/page.tsx)) where users can analyze new repositories and view their history.
+  - **`src/app/analysis/[analysisId]/`**: Contains the dynamic route for viewing individual analysis results ([src/app/analysis/[analysisId]/page.tsx](mdc:src/app/analysis/[analysisId]/page.tsx)).
+  - **`src/app/register/`**: Contains the user registration page ([src/app/register/page.tsx](mdc:src/app/register/page.tsx)).
+  - **`src/app/login/`**: Contains the user login page ([src/app/login/page.tsx](mdc:src/app/login/page.tsx)).
+  - **`src/app/api/`**: Contains all API routes.
+- **`prisma/`**: Contains the Prisma schema and database configuration.
+  - **`prisma/schema.prisma`**: Defines the application's data model and database connection.
+
+**Authentication:**
+
+User authentication is handled via API routes in `src/app/api/auth/`. The login page ([src/app/login/page.tsx](mdc:src/app/login/page.tsx)) and registration page ([src/app/register/page.tsx](mdc:src/app/register/page.tsx)) interact with these endpoints.
+
+**Analysis Flow:**
+
+Users initiate analysis from the dashboard ([src/app/dashboard/page.tsx](mdc:src/app/dashboard/page.tsx)), which calls the analyze API route ([src/app/api/repos/analyze/route.ts](mdc:src/app/api/repos/analyze/route.ts)). Analysis results are displayed on the dynamic analysis page ([src/app/analysis/[analysisId]/page.tsx](mdc:src/app/analysis/[analysisId]/page.tsx)), which fetches data from various API routes under `src/app/api/repos/[analysisId]/`.
+
+**Data Model:**
+
+The database schema defined in [prisma/schema.prisma](mdc:prisma/schema.prisma) includes models for `User` and `Analysis`, outlining the structure of user data and analysis results.

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { useEffect } from "react";
+import { initMonitoring } from "@/lib/monitoring";
 
 export const metadata: Metadata = {
   title: "Unpack - GitHub Code Analysis Platform",
@@ -11,8 +13,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  useEffect(() => {
+    initMonitoring();
+  }, []);
+
   return (
     <html lang="en">
+      <head>
+        <script src="/plausible.js" async defer />
+      </head>
       <body className="antialiased min-h-screen">
         {children}
       </body>

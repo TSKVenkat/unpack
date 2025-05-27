@@ -1,0 +1,13 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Analysis History API
+
+The API routes under `src/app/api/history/` manage the user's analysis history and bookmarking.
+
+- **Fetch Analysis History (`src/app/api/history/route.ts`):** The `GET` method of this route is called by the dashboard ([src/app/dashboard/page.tsx](mdc:src/app/dashboard/page.tsx)) to retrieve a list of analyses performed by the authenticated user. It supports filtering by the `bookmarked` query parameter to show only bookmarked analyses.
+- **Bookmark Analysis (`src/app/api/history/[analysisId]/bookmark/route.ts`):** This dynamic route handles the bookmarking functionality for a specific analysis. The `POST` method is used to bookmark an analysis, and the `DELETE` method is used to remove a bookmark. This is called from both the dashboard ([src/app/dashboard/page.tsx](mdc:src/app/dashboard/page.tsx)) and the analysis detail page ([src/app/analysis/[analysisId]/page.tsx](mdc:src/app/analysis/[analysisId]/page.tsx)).
+
+These routes ensure users can track their analysis activities and mark important results.

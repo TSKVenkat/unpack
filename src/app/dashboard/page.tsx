@@ -4,6 +4,14 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AuthLayout from "@/components/layout/AuthLayout";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Tabs } from "@/components/ui/Tabs";
+import { Loader, Skeleton } from "@/components/ui/Loader";
+import { useToast, ToastProvider } from "@/components/ui/Toast";
+import { FiSearch, FiBookmark, FiTrash2, FiExternalLink } from "react-icons/fi";
+import { Onboarding } from "@/components/ui/Onboarding";
 
 interface Analysis {
   id: string;
@@ -13,14 +21,43 @@ interface Analysis {
   bookmarked: boolean;
 }
 
-export default function Dashboard() {
+function DashboardContent() {
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
   const [repoUrl, setRepoUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'bookmarked'>('all');
+  const [search, setSearch] = useState("");
   const router = useRouter();
+  const { showToast } = useToast();
+
+  // Helper to attempt token refresh and retry request
+  const attemptTokenRefreshAndRetry = async (originalRequest: () => Promise<Response>): Promise<Response> => {
+    try {
+      const refreshResponse = await fetch("/api/auth/refresh", {
+        method: "POST",
+      });
+
+      if (!refreshResponse.ok) {
+        // If refresh fails, redirect to login
+        router.push("/login");
+        throw new Error("Could not refresh token.");
+      }
+
+      // If refresh is successful, retry the original request
+      const retryResponse = await originalRequest();
+      return retryResponse;
+
+    } catch (refreshError) {
+      console.error("Token refresh failed:", refreshError);
+      // Ensure redirection if refresh fails
+      if (!window.location.pathname.includes("/login")) {
+         router.push("/login");
+      }
+      throw refreshError; // Re-throw to be caught by the original caller's catch block
+    }
+  };
 
   // Fetch user's analysis history
   useEffect(() => {
@@ -32,21 +69,31 @@ export default function Dashboard() {
           ? "/api/history?bookmarked=true" 
           : "/api/history";
           
-        const response = await fetch(url);
+        let response = await fetch(url);
         
         if (!response.ok) {
-          // If not authenticated, redirect to login
+          // If not authenticated (401), attempt token refresh and retry
           if (response.status === 401) {
-            router.push("/login");
-            return;
+            console.log("Access token expired. Attempting refresh...");
+            response = await attemptTokenRefreshAndRetry(() => fetch(url));
+             if (!response.ok) {
+                 // If retry still fails, handle error (will likely redirect to login)
+                  throw new Error("Failed to fetch analysis history after refresh");
+             }
+          } else {
+             // Handle other non-401 errors
+             throw new Error(`Failed to fetch analysis history: ${response.statusText}`);
           }
-          throw new Error("Failed to fetch analysis history");
         }
 
         const data = await response.json();
         setAnalyses(data);
       } catch (err: any) {
         setError(err.message || "An error occurred");
+        // If the error is due to failed refresh and redirect hasn't happened yet
+         if (err.message !== "Could not refresh token." && !window.location.pathname.includes("/login")) {
+           // Handle other errors
+         }
       } finally {
         setLoading(false);
       }
@@ -67,8 +114,7 @@ export default function Dashboard() {
     setIsAnalyzing(true);
 
     try {
-      // This would be replaced with actual API call
-      const response = await fetch("/api/repos/analyze", {
+      const originalRequest = () => fetch("/api/repos/analyze", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -76,11 +122,21 @@ export default function Dashboard() {
         body: JSON.stringify({ repoUrl }),
       });
 
-      const data = await response.json();
+      let response = await originalRequest();
 
-      if (!response.ok) {
-        throw new Error(data.message || "Analysis failed");
-      }
+       if (!response.ok) {
+          if (response.status === 401) {
+             console.log("Access token expired during analyze. Attempting refresh...");
+             response = await attemptTokenRefreshAndRetry(originalRequest);
+              if (!response.ok) {
+                 throw new Error("Failed to analyze after refresh");
+              }
+           } else {
+              throw new Error(`Analysis failed: ${response.statusText}`);
+           }
+        }
+
+      const data = await response.json();
 
       // Redirect to analysis page
       router.push(`/analysis/${data.analysisId}`);
@@ -92,14 +148,23 @@ export default function Dashboard() {
 
   const toggleBookmark = async (analysisId: string, currentStatus: boolean) => {
     try {
-      // This would be replaced with actual API call
-      const response = await fetch(`/api/history/${analysisId}/bookmark`, {
+      const originalRequest = () => fetch(`/api/history/${analysisId}/bookmark`, {
         method: currentStatus ? "DELETE" : "POST",
       });
 
+      let response = await originalRequest();
+
       if (!response.ok) {
-        throw new Error("Failed to update bookmark");
-      }
+         if (response.status === 401) {
+             console.log("Access token expired during bookmark toggle. Attempting refresh...");
+             response = await attemptTokenRefreshAndRetry(originalRequest);
+              if (!response.ok) {
+                 throw new Error("Failed to toggle bookmark after refresh");
+              }
+           } else {
+              throw new Error(`Failed to update bookmark: ${response.statusText}`);
+           }
+        }
 
       // Update local state
       setAnalyses(analyses.map(analysis => 
@@ -112,6 +177,43 @@ export default function Dashboard() {
     }
   };
 
+  const handleDeleteAnalysis = async (analysisId: string) => {
+    if (!confirm("Are you sure you want to delete this analysis?")) {
+      return;
+    }
+
+    try {
+      setLoading(true); // Or a specific loading state for deletion
+      setError(""); // Clear previous errors
+
+       const originalRequest = () => fetch(`/api/history/${analysisId}`, {
+        method: "DELETE",
+      });
+
+      let response = await originalRequest();
+
+      if (!response.ok) {
+         if (response.status === 401) {
+             console.log("Access token expired during delete. Attempting refresh...");
+             response = await attemptTokenRefreshAndRetry(originalRequest);
+              if (!response.ok) {
+                 throw new Error("Failed to delete analysis after refresh");
+              }
+           } else {
+              throw new Error(`Failed to delete analysis: ${response.statusText}`);
+           }
+        }
+
+      // Remove the deleted analysis from the state
+      setAnalyses(analyses.filter(analysis => analysis.id !== analysisId));
+      
+    } catch (err: any) {
+      setError(err.message || "An error occurred during deletion");
+    } finally {
+      setLoading(false); // Or clear specific loading state
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -121,120 +223,116 @@ export default function Dashboard() {
     });
   };
 
+  const filteredAnalyses = analyses.filter(a =>
+    (filter === 'all' || a.bookmarked) &&
+    (a.repoName.toLowerCase().includes(search.toLowerCase()) || a.repoUrl.toLowerCase().includes(search.toLowerCase()))
+  );
+
   return (
-    <AuthLayout title="Dashboard">
-      {/* Repository Analysis Form */}
-      <div className="bg-[#1a1a1a] rounded-lg p-6 mb-8 border border-[#333]">
-        <h2 className="text-xl font-semibold mb-4">Analyze a Repository</h2>
-        
-        {error && (
-          <div className="bg-[#3a1618] border border-[#ff3b3f] text-[#ff3b3f] px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-        
-        <form onSubmit={handleAnalyze} className="flex flex-col md:flex-row gap-4">
-          <input
-            type="text"
+    <div className="relative min-h-screen bg-playfulWhite pb-24">
+      <div className="max-w-4xl mx-auto pt-10 px-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-6 text-playfulBlack">Your Repository Analyses</h1>
+          <a href="/analysis/compare" className="inline-block px-4 py-2 border border-playfulGray rounded-md text-playfulGray hover:text-playfulRed hover:border-playfulRed transition mb-4 md:mb-0">Compare</a>
+        </div>
+        <div className="flex flex-col md:flex-row md:items-center gap-4 mb-8">
+          <Input
+            icon={<FiSearch />}
+            placeholder="Search analyses..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            fullWidth
+          />
+          <Tabs
+            tabs={[
+              { label: "All", value: "all" },
+              { label: "Bookmarked", value: "bookmarked" },
+            ]}
+            value={filter}
+            onChange={v => setFilter(v as 'all' | 'bookmarked')}
+          />
+        </div>
+        <form onSubmit={handleAnalyze} className="flex flex-col md:flex-row gap-4 mb-10">
+          <Input
             placeholder="Paste GitHub repository URL"
             value={repoUrl}
-            onChange={(e) => setRepoUrl(e.target.value)}
-            className="flex-grow px-4 py-2 rounded-md bg-[#242424] border border-[#333] text-[#EDEDED] focus:outline-none focus:border-[#FF3B3F] focus:ring-1 focus:ring-[#FF3B3F]"
-            required
+            onChange={e => setRepoUrl(e.target.value)}
+            fullWidth
           />
-          <button
-            type="submit"
-            disabled={isAnalyzing}
-            className="bg-[#FF3B3F] text-white px-6 py-2 rounded-md hover:bg-[#e03538] transition-colors disabled:opacity-50"
-          >
-            {isAnalyzing ? "Analyzing..." : "Analyze"}
-          </button>
+          <Button type="submit" loading={isAnalyzing} className="whitespace-nowrap">
+            Analyze
+          </Button>
         </form>
-      </div>
-
-      {/* Analysis History */}
-      <div className="bg-[#1a1a1a] rounded-lg p-6 border border-[#333]">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold">Analysis History</h2>
-          <div className="flex gap-4">
-            <button 
-              className={`text-sm transition-colors ${filter === 'all' ? 'text-[#FF3B3F]' : 'text-[#EDEDED] hover:text-[#FF3B3F]'}`}
-              onClick={() => setFilter('all')}
-            >
-              All
-            </button>
-            <button 
-              className={`text-sm transition-colors ${filter === 'bookmarked' ? 'text-[#FF3B3F]' : 'text-[#EDEDED] hover:text-[#FF3B3F]'}`}
-              onClick={() => setFilter('bookmarked')}
-            >
-              Bookmarked
-            </button>
-          </div>
-        </div>
-        
+        {error && (
+          <div className="mb-4"><Card className="bg-playfulRed text-white">{error}</Card></div>
+        )}
         {loading ? (
-          <div className="text-center py-8">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#FF3B3F]"></div>
-            <p className="mt-2 text-[#888888]">Loading...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32" />)}
           </div>
-        ) : analyses.length === 0 ? (
-          <div className="text-center py-8 text-[#888888]">
-            <p>
-              {filter === 'bookmarked' 
-                ? "No bookmarked analyses found." 
-                : "No analysis history found. Analyze a repository to get started."}
-            </p>
-          </div>
+        ) : filteredAnalyses.length === 0 ? (
+          <Onboarding
+            type="dashboard"
+            onAction={() => document.querySelector('form')?.scrollIntoView({ behavior: 'smooth' })}
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b border-[#333] text-left">
-                <tr>
-                  <th className="pb-3 text-[#888888] font-medium">Repository</th>
-                  <th className="pb-3 text-[#888888] font-medium">Date</th>
-                  <th className="pb-3 text-[#888888] font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {analyses.map((analysis) => (
-                  <tr key={analysis.id} className="border-b border-[#333] hover:bg-[#242424]">
-                    <td className="py-4">
-                      <Link href={`/analysis/${analysis.id}`} className="text-[#EDEDED] hover:text-[#FF3B3F]">
-                        {analysis.repoName}
-                      </Link>
-                      <p className="text-[#888888] text-sm truncate max-w-xs">{analysis.repoUrl}</p>
-                    </td>
-                    <td className="py-4 text-[#888888]">{formatDate(analysis.createdAt)}</td>
-                    <td className="py-4">
-                      <div className="flex gap-3">
-                        <button 
-                          onClick={() => toggleBookmark(analysis.id, analysis.bookmarked)}
-                          className={`p-1 rounded hover:bg-[#2a2a2a] ${analysis.bookmarked ? 'text-[#FF3B3F]' : 'text-[#888888]'}`}
-                          title={analysis.bookmarked ? "Remove bookmark" : "Bookmark"}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill={analysis.bookmarked ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                          </svg>
-                        </button>
-                        <Link 
-                          href={`/analysis/${analysis.id}`}
-                          className="p-1 rounded text-[#888888] hover:text-[#EDEDED] hover:bg-[#2a2a2a]"
-                          title="View analysis"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {filteredAnalyses.map((analysis) => (
+              <Card key={analysis.id} className="flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg font-bold text-playfulBlack">{analysis.repoName}</span>
+                    {analysis.bookmarked && <FiBookmark className="text-playfulRed" />}
+                  </div>
+                  <div className="text-sm text-playfulGray mb-2 truncate">{analysis.repoUrl}</div>
+                  <div className="text-xs text-playfulGray mb-4">Analyzed on {new Date(analysis.createdAt).toLocaleDateString()}</div>
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1 flex items-center gap-2"
+                    onClick={() => router.push(`/analysis/${analysis.id}`)}
+                  >
+                    <FiExternalLink /> View
+                  </Button>
+                  <Button
+                    variant={analysis.bookmarked ? "primary" : "outline"}
+                    className="flex-1 flex items-center gap-2"
+                    onClick={() => toggleBookmark(analysis.id, analysis.bookmarked)}
+                  >
+                    <FiBookmark />
+                    {analysis.bookmarked ? "Unbookmark" : "Bookmark"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 flex items-center gap-2 text-playfulRed border-playfulRed"
+                    onClick={() => handleDeleteAnalysis(analysis.id)}
+                  >
+                    <FiTrash2 /> Delete
+                  </Button>
+                </div>
+              </Card>
+            ))}
           </div>
         )}
       </div>
-    </AuthLayout>
+      <Button
+        className="fixed bottom-8 right-8 shadow-playful text-lg px-8 py-4 z-40"
+        variant="primary"
+        onClick={() => document.querySelector('form')?.scrollIntoView({ behavior: 'smooth' })}
+      >
+        + Analyze New Repo
+      </Button>
+    </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <ToastProvider>
+      <AuthLayout>
+        <DashboardContent />
+      </AuthLayout>
+    </ToastProvider>
   );
 }

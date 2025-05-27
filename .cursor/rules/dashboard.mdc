@@ -1,0 +1,16 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+``` # Dashboard
+
+The dashboard ([src/app/dashboard/page.tsx](mdc:src/app/dashboard/page.tsx)) serves as the main landing page after a user logs in. It allows users to:
+
+- **Analyze new GitHub repositories:** Users can enter a repository URL and initiate an analysis by submitting the form, which calls the `POST` method of the analysis API route ([src/app/api/repos/analyze/route.ts](mdc:src/app/api/repos/analyze/route.ts)). Upon successful initiation, the user is redirected to the specific analysis page.
+- **View analysis history:** The page fetches and displays a list of the user's past analyses by making a `GET` request to the history API route ([src/app/api/history/route.ts](mdc:src/app/api/history/route.ts)).
+- **Filter history:** Users can filter their history to view only bookmarked analyses using a filter option that modifies the API call to `/api/history?bookmarked=true`.
+- **Bookmark analyses:** Users can toggle the bookmarked status of an analysis directly from the history list by calling the bookmark API route ([src/app/api/history/[analysisId]/bookmark/route.ts](mdc:src/app/api/history/[analysisId]/bookmark/route.ts)).
+- **View individual analysis:** Clicking on a repository name in the history list navigates the user to the detailed analysis page for that repository ([src/app/analysis/[analysisId]/page.tsx](mdc:src/app/analysis/[analysisId]/page.tsx)).
+
+The dashboard uses client-side state (`useState`) and effects (`useEffect`) to manage the list of analyses, loading states, errors, and the input form.

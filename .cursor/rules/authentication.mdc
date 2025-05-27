@@ -1,0 +1,15 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Authentication System
+
+The authentication system handles user registration, login, logout, and token refreshing. It utilizes API routes under `src/app/api/auth/` and corresponding frontend pages.
+
+- **Registration:** The registration page ([src/app/register/page.tsx](mdc:src/app/register/page.tsx)) allows new users to create an account by submitting their name, email, and password to the registration API route ([src/app/api/auth/register/route.ts](mdc:src/app/api/auth/register/route.ts)).
+- **Login:** The login page ([src/app/login/page.tsx](mdc:src/app/login/page.tsx)) allows existing users to log in by sending their email and password to the login API route ([src/app/api/auth/login/route.ts](mdc:src/app/api/auth/login/route.ts)).
+- **Logout:** The logout functionality is handled by the logout API route ([src/app/api/auth/logout/route.ts](mdc:src/app/api/auth/logout/route.ts)), which likely clears the user's session or authentication tokens.
+- **Token Refresh:** The system includes a token refresh mechanism handled by the refresh API route ([src/app/api/auth/refresh/route.ts](mdc:src/app/api/auth/refresh/route.ts)) to manage user sessions.
+
+Authentication status is often checked in API routes and pages (e.g., in the dashboard and analysis pages) to protect routes and data.

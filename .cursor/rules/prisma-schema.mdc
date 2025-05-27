@@ -1,0 +1,46 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+``` # Database Schema
+
+The database schema is defined in [prisma/schema.prisma](mdc:prisma/schema.prisma) using Prisma ORM. It outlines the structure of the data used by the application.
+
+**Key Models:**
+
+- **`User`**: Represents a user of the application.
+  - `id`: Unique identifier (UUID).
+  - `email`: User's email (unique).
+  - `hashedPassword`: Stores the hashed password.
+  - `name`: Optional user name.
+  - `createdAt`, `updatedAt`: Timestamps for creation and updates.
+  - `analyses`: A relation to the `Analysis` model, linking users to their performed analyses.
+
+- **`Analysis`**: Represents a single repository analysis.
+  - `id`: Unique identifier (UUID).
+  - `repoUrl`: The URL of the analyzed repository.
+  - `repoName`: The name of the analyzed repository.
+  - `userId`: Foreign key linking to the `User` who performed the analysis.
+  - `user`: Relation to the `User` model.
+  - `createdAt`, `updatedAt`: Timestamps.
+  - `summary`: Text summary of the analysis.
+  - `features`, `architecture`, `codeStats`: JSON fields storing detailed analysis results.
+  - `analysisItems`: Relation to the `AnalysisItem` model, linking an analysis to its individual file/directory items.
+  - `bookmarked`: Boolean flag to indicate if the analysis is bookmarked.
+
+- **`AnalysisItem`**: Represents a single file or directory within an analysis.
+  - `id`: Unique identifier (UUID).
+  - `analysisId`: Foreign key linking to the parent `Analysis`.
+  - `analysis`: Relation to the `Analysis` model.
+  - `path`: The path of the file or directory.
+  - `type`: Indicates if it's a "FILE" or "DIRECTORY".
+  - `summary`: Optional text summary for the item.
+  - `content`: Optional text content (likely for files).
+  - `features`: Optional JSON field for item-specific features.
+  - `complexity`: Optional float for code complexity.
+  - `createdAt`: Timestamp.
+
+The schema also defines the `datasource` (PostgreSQL) and `generator` (Prisma Client) configurations.
+
+

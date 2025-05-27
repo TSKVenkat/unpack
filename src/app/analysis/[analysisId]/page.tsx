@@ -5,16 +5,28 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import AuthLayout from "@/components/layout/AuthLayout";
 
+interface AnalysisItem {
+  id: string;
+  path: string;
+  type: "FILE" | "DIRECTORY";
+  summary: string | null;
+  content: string | null; // Only for files
+  features: any | null; // JSON
+  complexity: number | null; // Only for files
+  createdAt: string;
+}
+
 interface Analysis {
   id: string;
   repoName: string;
   repoUrl: string;
   createdAt: string;
   summary: string;
-  features: any;
-  architecture: any;
-  codeStats: any;
+  features: any; // JSON
+  architecture: any; // JSON
+  codeStats: any; // JSON
   bookmarked: boolean;
+  analysisItems: AnalysisItem[]; // Add analysisItems here
 }
 
 export default function AnalysisPage() {
@@ -25,6 +37,10 @@ export default function AnalysisPage() {
   const params = useParams();
   const router = useRouter();
   const analysisId = params.analysisId as string;
+  const [isReanalyzing, setIsReanalyzing] = useState(false);
+  const [selectedAnalysisItem, setSelectedAnalysisItem] = useState<AnalysisItem | null>(null);
+  const [itemDetailLoading, setItemDetailLoading] = useState(false);
+  const [itemDetailError, setItemDetailError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -76,6 +92,81 @@ export default function AnalysisPage() {
     }
   };
 
+  const handleExport = async (format: 'pdf' | 'md') => {
+    if (!analysis) return;
+
+    try {
+      const exportUrl = `/api/repos/${analysisId}/export?format=${format}`;
+      // Trigger download by navigating to the URL
+      window.open(exportUrl, '_blank');
+    } catch (err: any) {
+      setError(err.message || `An error occurred during ${format} export`);
+    }
+  };
+
+  const handleReanalyze = async () => {
+    if (!analysis) return;
+
+    setIsReanalyzing(true);
+    setError(""); // Clear previous errors
+
+    try {
+      const response = await fetch("/api/repos/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ repoUrl: analysis.repoUrl }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Re-analysis failed");
+      }
+
+      // Redirect to the new analysis page
+      router.push(`/analysis/${data.analysisId}`);
+    } catch (err: any) {
+      setError(err.message || "An error occurred during re-analysis");
+      setIsReanalyzing(false);
+    }
+  };
+
+  const handleItemClick = async (item: AnalysisItem) => {
+    if (selectedAnalysisItem?.id === item.id) {
+      // Deselect if already selected
+      setSelectedAnalysisItem(null);
+      setItemDetailError(null);
+      return;
+    }
+
+    setSelectedAnalysisItem(null); // Clear previous selection
+    setItemDetailLoading(true);
+    setItemDetailError(null);
+
+    try {
+      const endpoint = item.type === 'FILE' ? `/api/repos/${analysisId}/file?path=${encodeURIComponent(item.path)}` : `/api/repos/${analysisId}/directory?path=${encodeURIComponent(item.path)}`;
+      
+      const response = await fetch(endpoint);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to fetch ${item.type.toLowerCase()} details`);
+      }
+
+      const data = await response.json();
+      // Update the selected item with full details. Ensure complexity is handled correctly if it's null.
+      setSelectedAnalysisItem({ ...item, ...data, complexity: data.complexity !== undefined ? data.complexity : item.complexity });
+
+    } catch (err: any) {
+      console.error(`Error fetching ${item.type.toLowerCase()} details:`, err);
+      setItemDetailError(err.message || `An error occurred while fetching ${item.type.toLowerCase()} details`);
+    } finally {
+      setItemDetailLoading(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -124,11 +215,19 @@ export default function AnalysisPage() {
               <p className="text-[#888888] mt-1">Analyzed on {formatDate(analysis.createdAt)}</p>
             </div>
             <div className="flex gap-3">
-              <button className="bg-[#242424] hover:bg-[#2a2a2a] text-[#EDEDED] px-4 py-2 rounded-md transition-colors">
-                Export
+              <button 
+                className="bg-[#242424] hover:bg-[#2a2a2a] text-[#EDEDED] px-4 py-2 rounded-md transition-colors"
+                onClick={() => handleExport('pdf')}
+              >
+                Export PDF
               </button>
-              <button className="bg-[#FF3B3F] hover:bg-[#e03538] text-white px-4 py-2 rounded-md transition-colors">
-                Re-analyze
+              {/* Optionally add a dropdown for other formats */}
+              <button 
+                className="bg-[#FF3B3F] hover:bg-[#e03538] text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50"
+                onClick={handleReanalyze}
+                disabled={isReanalyzing}
+              >
+                {isReanalyzing ? "Re-analyzing..." : "Re-analyze"}
               </button>
             </div>
           </div>
@@ -175,6 +274,16 @@ export default function AnalysisPage() {
                 }`}
               >
                 Code Stats
+              </button>
+              <button
+                onClick={() => setActiveTab("items")}
+                className={`py-4 px-1 font-medium border-b-2 ${
+                  activeTab === "items"
+                    ? "border-[#FF3B3F] text-[#FF3B3F]"
+                    : "border-transparent text-[#888888] hover:text-[#EDEDED]"
+                }`}
+              >
+                Files & Directories
               </button>
             </nav>
           </div>
@@ -261,6 +370,78 @@ export default function AnalysisPage() {
                         <span className="text-[#888888]">{analysis.codeStats.blankLines || 0}</span>
                       </div>
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "items" && analysis.analysisItems && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Analyzed Files and Directories</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-[#242424] p-4 rounded-lg border border-[#333] max-h-96 overflow-y-auto">
+                    <h3 className="text-lg font-medium mb-3">Items</h3>
+                    <ul>
+                      {analysis.analysisItems.map(item => (
+                        <li 
+                          key={item.id}
+                          className={`cursor-pointer text-sm py-1 truncate ${selectedAnalysisItem?.id === item.id ? 'text-[#FF3B3F]' : 'text-[#EDEDED] hover:text-[#FF3B3F]'}`}
+                          onClick={() => handleItemClick(item)}
+                        >
+                          {item.type === 'DIRECTORY' ? '📁 ' : '📄 '}{item.path}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="bg-[#242424] p-4 rounded-lg border border-[#333]">
+                    <h3 className="text-lg font-medium mb-3">Selected Item Details</h3>
+                    {itemDetailLoading ? (
+                      <div className="text-center py-8">
+                        <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-[#FF3B3F]"></div>
+                        <p className="mt-2 text-[#888888]">Loading details...</p>
+                      </div>
+                    ) : itemDetailError ? (
+                      <div className="text-[#ff3b3f]">
+                        Error: {itemDetailError}
+                      </div>
+                    ) : selectedAnalysisItem ? (
+                      <div>
+                        <p className="text-[#EDEDED] font-semibold mb-2">Path: {selectedAnalysisItem.path}</p>
+                        <p className="text-[#EDEDED] mb-4">Type: {selectedAnalysisItem.type}</p>
+                        {selectedAnalysisItem.summary && (
+                          <div className="mb-4">
+                            <h4 className="text-md font-medium mb-1">Summary:</h4>
+                            <p className="text-[#888888] whitespace-pre-line">{selectedAnalysisItem.summary}</p>
+                          </div>
+                        )}
+                        {selectedAnalysisItem.type === 'FILE' && selectedAnalysisItem.complexity !== null && (
+                          <p className="text-[#EDEDED] mb-4">Complexity Score: {selectedAnalysisItem.complexity !== undefined ? selectedAnalysisItem.complexity : 'N/A'}</p>
+                        )}
+                        {selectedAnalysisItem.features && Object.keys(selectedAnalysisItem.features).length > 0 && (
+                          <div className="mb-4">
+                            <h4 className="text-md font-medium mb-1">Features:</h4>
+                            {Array.isArray(selectedAnalysisItem.features) ? (
+                              <ul className="list-disc list-inside text-[#888888]">
+                                {selectedAnalysisItem.features.map((feature: any, idx: number) => (
+                                  <li key={idx}><span className="font-medium text-[#EDEDED]">{feature.name}:</span> {feature.description}</li>
+                                ))}
+                              </ul>
+                            ) : (Object.keys(selectedAnalysisItem.features).length > 0 && (
+                               <pre className="bg-[#1a1a1a] p-2 rounded-md text-xs overflow-x-auto"><code>{JSON.stringify(selectedAnalysisItem.features, null, 2)}</code></pre>
+                            ))}
+                          </div>
+                        )}
+                        {selectedAnalysisItem.type === 'FILE' && selectedAnalysisItem.content && (
+                          <div className="mb-4">
+                            <h4 className="text-md font-medium mb-1">Content (Snippet):</h4>
+                             <pre className="bg-[#1a1a1a] p-2 rounded-md text-xs overflow-x-auto max-h-40"><code>{selectedAnalysisItem.content.substring(0, 500)}...</code></pre>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-[#888888]">Select an item from the list to view details.</p>
+                    )}
                   </div>
                 </div>
               </div>

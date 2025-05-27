@@ -1,0 +1,19 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Repository Analysis API
+
+The API routes under `src/app/api/repos/` handle the initiation and retrieval of repository analysis data.
+
+- **Analyze Repository (`src/app/api/repos/analyze/route.ts`):** This route's `POST` method is called by the dashboard ([src/app/dashboard/page.tsx](mdc:src/app/dashboard/page.tsx)) to initiate the analysis of a new GitHub repository. It likely takes the repository URL as input and starts an asynchronous analysis process.
+- **Fetch Analysis Details (`src/app/api/repos/[analysisId]/route.ts`):** The `GET` method of this dynamic route is used by the analysis detail page ([src/app/analysis/[analysisId]/page.tsx](mdc:src/app/analysis/[analysisId]/page.tsx)) to fetch the complete analysis data for a specific `analysisId`. It returns the summary, features, architecture, and code statistics.
+- **Analysis Status (`src/app/api/repos/[analysisId]/status/route.ts`):** This route likely provides updates on the progress of an ongoing analysis.
+- **Analysis Export (`src/app/api/repos/[analysisId]/export/route.ts`):** This route handles the export functionality for analysis results.
+- **Architecture Details (`src/app/api/repos/[analysisId]/architecture/route.ts`):** Provides specific architecture details for an analysis.
+- **Features Details (`src/app/api/repos/[analysisId]/features/route.ts`):** Provides specific features details for an analysis.
+- **Summary Details (`src/app/api/repos/[analysisId]/summary/route.ts`):** Provides the summary for an analysis.
+- **Directory and File Details (`src/app/api/repos/[analysisId]/directory/route.ts`, `src/app/api/repos/[analysisId]/file/route.ts`):** These routes likely provide detailed information about specific directories and files within an analyzed repository.
+
+These API routes interact with the backend logic to perform the analysis, store results, and retrieve them based on the provided `analysisId`.

@@ -1,0 +1,16 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Analysis Detail Page
+
+The analysis detail page ([src/app/analysis/[analysisId]/page.tsx](mdc:src/app/analysis/[analysisId]/page.tsx)) is a dynamic route that displays the comprehensive analysis results for a single GitHub repository.
+
+- **Fetching Analysis Data:** The page uses the `analysisId` from the URL parameters to fetch the specific analysis data by calling the `GET` method of the analysis detail API route ([src/app/api/repos/[analysisId]/route.ts](mdc:src/app/api/repos/[analysisId]/route.ts)).
+- **Displaying Information:** It presents various aspects of the analysis, including a summary, features, architecture details, and code statistics.
+- **Tabbed Interface:** The analysis details are organized into different tabs (Summary, Features, Architecture, Code Stats) for better navigation and readability.
+- **Bookmarking:** Users can toggle the bookmarked status of the analysis directly from this page by interacting with the bookmark API route ([src/app/api/history/[analysisId]/bookmark/route.ts](mdc:src/app/api/history/[analysisId]/bookmark/route.ts)).
+- **Export and Re-analyze:** The page includes buttons for exporting the analysis results and initiating a re-analysis, which likely interact with corresponding API endpoints (e.g., `src/app/api/repos/[analysisId]/export/route.ts`).
+
+The page manages its state using `useState` for the analysis data, loading/error states, and the active tab. It uses `useEffect` to fetch data when the component mounts or the `analysisId` changes.

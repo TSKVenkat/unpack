@@ -31,7 +31,7 @@ export async function POST(
     const analysis = await prisma.analysis.findFirst({
       where: {
         id: analysisId,
-        userId: user.id,
+        userId: user!.id,
       },
     });
 
@@ -118,7 +118,7 @@ export async function GET(
     const analysis = await prisma.analysis.findFirst({
       where: {
         id: analysisId,
-        userId: user.id,
+        userId: user!.id,
       },
     });
 
